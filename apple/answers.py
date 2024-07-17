@@ -56,9 +56,10 @@ def answer_3(df_data: pd.DataFrame, close_mean) -> pd.DataFrame:
 def answer_4(df_data: pd.DataFrame) -> pd.DataFrame:
     """Take a stock price DF and return a weekly aggregate of the numeric data"""
     return df_data.resample('W').agg({'AAPL.Open': 'mean', 'AAPL.High': 'mean',
-                              'AAPL.Low': 'mean', 'AAPL.Close': 'mean',
-                              'AAPL.Volume': 'mean', 'AAPL.Adjusted': 'mean',
-                              'dn': 'mean', 'mavg': 'mean', 'up': 'mean'})
+                                      'AAPL.Low': 'mean', 'AAPL.Close': 'mean',
+                                      'AAPL.Volume': 'mean', 'AAPL.Adjusted': 'mean',
+                                      'dn': 'mean', 'mavg': 'mean', 'up': 'mean'})
+
 
 if __name__ == "__main__":
     df = check_download_data()
@@ -107,8 +108,8 @@ if __name__ == "__main__":
     df_check['date'] = pd.to_datetime(df_check['date'])
     df_check.set_index('date', inplace=True)
     wrote_correct = (pd.to_numeric(df_weekly_all['AAPL.Close'], errors='coerce')
-                    .sub(pd.to_numeric(df_check['AAPL.Close'], errors='coerce'))
-                    .abs() < 1e-6).all()
+                     .sub(pd.to_numeric(df_check['AAPL.Close'], errors='coerce'))
+                     .abs() < 1e-6).all()
     print(f'Checking file wrote properly: {wrote_correct}')
 
     print('-' * 80)
