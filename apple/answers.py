@@ -15,18 +15,18 @@ def check_download_data(data_file='finance-charts-apple.csv'):
         # In a real life production environment, we would probably put this URL in a config file
         #  or take in from the command line
         url = 'https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv'
-        df = pd.read_csv(url, index_col=0)
-        df.to_csv(path_to_data)
+        df_data = pd.read_csv(url, index_col=0)
+        df_data.to_csv(path_to_data)
         print("File retrieved from Github and written locally")
         return df
 
-def correct_order(df: pd.DataFrame) -> pd.DataFrame:
+def correct_order(df_data: pd.DataFrame) -> pd.DataFrame:
     """Take in a stock price DF and discard all rows that are out of order (by date)
     Assumption: less than 1M rows. If higher would have to use a different approach"""
-    if not df.empty and 'date' in df.columns and isinstance(df['date'].iloc[0], pd.Timestamp):
+    if not df_data.empty and 'date' in df_data.columns and isinstance(df_data['date'].iloc[0], pd.Timestamp):
         ordered_list = []
         last_date = pd.Timestamp.min
-        for row in df.itertuples(index=False):
+        for row in df_data.itertuples(index=False):
             if row.date > last_date:
                 ordered_list.append(row)
                 last_date = row.date
@@ -34,28 +34,28 @@ def correct_order(df: pd.DataFrame) -> pd.DataFrame:
     else:
         return df
 
-def answer_1(df: pd.DataFrame) -> (float, float, float):
+def answer_1(df_data: pd.DataFrame) -> (float, float, float):
     """Take a stock price DF and return the min, max and avg/mean"""
-    min_close = df['AAPL.Close'].min()
-    max_close = df['AAPL.Close'].max()
-    avg_close = df['AAPL.Close'].mean()
+    min_close = df_data['AAPL.Close'].min()
+    max_close = df_data['AAPL.Close'].max()
+    avg_close = df_data['AAPL.Close'].mean()
     return min_close, max_close, avg_close
 
-def answer_2(df: pd.DataFrame) -> float:
+def answer_2(df_data: pd.DataFrame) -> float:
     """Take a stock price DF and return the avg/mean volume"""
-    return df['AAPL.Volume'].mean()
+    return df_data['AAPL.Volume'].mean()
 
-def answer_3(df: pd.DataFrame, close_mean) -> pd.DataFrame:
+def answer_3(df_data: pd.DataFrame, close_mean) -> pd.DataFrame:
     """Take a stock price DF and return the subset of rows that are below the mean volume
     Add a day of week column to the DF"""
-    df_low_volume = df[df['AAPL.Volume'] < close_mean].copy()
-    df_low_volume['date'] = pd.to_datetime(df_low_volume['Date'])
-    df_low_volume['day_of_week'] = df_low_volume['date'].dt.day_name()
+    df_low_volume = df_data[df_data['AAPL.Volume'] < close_mean].copy()
+    df_low_volume['date_col'] = pd.to_datetime(df_low_volume.index)
+    df_low_volume['day_of_week'] = df_low_volume['date_col'].dt.day_name()
     return df_low_volume
 
-def answer_4(df: pd.DataFrame) -> pd.DataFrame:
+def answer_4(df_data: pd.DataFrame) -> pd.DataFrame:
     """Take a stock price DF and return a weekly aggregate of the numeric data"""
-    return df.resample('W').agg({'AAPL.Open': 'mean', 'AAPL.High': 'mean',
+    return df_data.resample('W').agg({'AAPL.Open': 'mean', 'AAPL.High': 'mean',
                               'AAPL.Low': 'mean', 'AAPL.Close': 'mean',
                               'AAPL.Volume': 'mean', 'AAPL.Adjusted': 'mean',
                               'dn': 'mean', 'mavg': 'mean', 'up': 'mean'})
@@ -63,10 +63,10 @@ def answer_4(df: pd.DataFrame) -> pd.DataFrame:
 if __name__ == "__main__":
     df = check_download_data()
     print("Head of source data:")
-    print(df.head(5))
     df['date'] = pd.to_datetime(df.index)
     unique_df = df.reset_index().drop_duplicates(subset='date', keep='first').set_index('date')
-    new_df = correct_order(unique_df)
+    new_df = correct_order(unique_df).set_index('date')
+    print(new_df.head(5))
 
     print('-' * 80)
     print('Question 1: min, max, mean of Closing prices')
@@ -80,7 +80,7 @@ if __name__ == "__main__":
     path_to_low_volume = os.path.join('data', 'low-volume.csv')
     close_mean = answer_2(new_df)
     print(f'The average close volume is {close_mean}')
-    df_low_volume = new_df[new_df['AAPL.Volume'] < close_mean].set_index('Date')
+    df_low_volume = new_df[new_df['AAPL.Volume'] < close_mean]
     print("Writing out subset of rows to file 'low-volume.csv'")
     df_low_volume.to_csv(path_to_low_volume)
     df_check = pd.read_csv(path_to_low_volume, index_col=0)
@@ -90,8 +90,6 @@ if __name__ == "__main__":
     print('Question 3: Add the day of week as a column to the data frame')
     df_low_volume = answer_3(new_df, close_mean)
     df_low_volume_date = df_low_volume.copy()
-    df_low_volume = df_low_volume.drop('date', axis=1)
-    df_low_volume.set_index('Date', inplace=True)
     print(f'New dataframe has {len(df_low_volume)} rows:')
     print(df_low_volume.head(5))
 
@@ -117,7 +115,6 @@ if __name__ == "__main__":
     # Candlestick Chart
     # Assumption: 'low volume days' are the days below the average volume
     # Assumption: Only low volume days are shown, so there will be many "missing" days on the chart
-    df_low_volume_date = df_low_volume_date.rename_axis('date_col').reset_index().drop(['date', 'Date'], axis=1)
     df_low_volume_date['date_col'] = pd.to_datetime(df_low_volume_date['date_col'])
     df_low_volume_date['date_col_str'] = df_low_volume_date['date_col'].dt.strftime('%Y-%m-%d')
     df_low_volume_date = df_low_volume_date.sort_values('date_col_str')
