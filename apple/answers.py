@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 
-def check_download_data(data_file='finance-charts-apple.csv'):
+def check_download_data(data_file='finance-charts-apple.csv') -> pd.DataFrame:
     """Check for the full stock data file locally, if not exists, then download
     Return the file contents in a DF"""
     path_to_data = os.path.join('data', data_file)
@@ -22,17 +22,24 @@ def check_download_data(data_file='finance-charts-apple.csv'):
 
 def correct_order(df_data: pd.DataFrame) -> pd.DataFrame:
     """Take in a stock price DF and discard all rows that are out of order (by date)
-    Assumption: less than 1M rows. If higher would have to use a different approach"""
-    if not df_data.empty and 'date' in df_data.columns and isinstance(df_data['date'].iloc[0], pd.Timestamp):
-        ordered_list = []
+    Assumption: less than 1M rows. If higher, I would have to use a different approach"""
+    if not df_data.empty and 'date' in df_data.columns and isinstance(
+            df_data['date'].iloc[0], pd.Timestamp):
+        ordered_list, bad_rows = [], []
         last_date = pd.Timestamp.min
         for row in df_data.itertuples(index=False):
             if row.date > last_date:
                 ordered_list.append(row)
                 last_date = row.date
-        return pd.DataFrame(data=ordered_list, columns=df.columns)
+            else:
+                bad_rows.append(row)
+        if bad_rows:
+            print(f"Discarding {len(bad_rows)} rows that are out of order...")
+            for row in bad_rows:
+                print(row)
+        return pd.DataFrame(data=ordered_list, columns=df_data.columns)
     else:
-        return df
+        return df_data
 
 def answer_1(df_data: pd.DataFrame) -> (float, float, float):
     """Take a stock price DF and return the min, max and avg/mean"""
@@ -66,7 +73,7 @@ if __name__ == "__main__":
     print("Head of source data:")
     df['date'] = pd.to_datetime(df.index)
     unique_df = df.reset_index().drop_duplicates(subset='date', keep='first').set_index('date')
-    new_df = correct_order(unique_df).set_index('date')
+    new_df = correct_order(unique_df)
     print(new_df.head(5))
 
     print('-' * 80)
@@ -113,13 +120,15 @@ if __name__ == "__main__":
     print(f'Checking file wrote properly: {wrote_correct}')
 
     print('-' * 80)
-    # Candlestick Chart
+    print('Question 5: Generating Candlestick Chart for low volume (below average) days')
     # Assumption: 'low volume days' are the days below the average volume
     # Assumption: Only low volume days are shown, so there will be many "missing" days on the chart
     df_low_volume_date['date_col'] = pd.to_datetime(df_low_volume_date['date_col'])
     df_low_volume_date['date_col_str'] = df_low_volume_date['date_col'].dt.strftime('%Y-%m-%d')
     df_low_volume_date = df_low_volume_date.sort_values('date_col_str')
-    all_days = set(df_low_volume_date.date_col[0] + timedelta(x) for x in range((df_low_volume_date.date_col[len(df_low_volume_date.date_col) - 1] - df_low_volume_date.date_col[0]).days))
+    all_days = set(df_low_volume_date.date_col.iloc[0] + timedelta(x)
+                   for x in range((df_low_volume_date.date_col.iloc[len(df_low_volume_date.date_col) - 1] -
+                                   df_low_volume_date.date_col.iloc[0]).days))
     missing = sorted(set(all_days) - set(df_low_volume_date.date_col))
     print(df_low_volume_date.head(5))
     fig = go.Figure(data=[go.Candlestick(
@@ -129,7 +138,8 @@ if __name__ == "__main__":
         low=df_low_volume_date['AAPL.Low'],
         close=df_low_volume_date['AAPL.Close']
     )])
-    fig.update_xaxes(rangebreaks=[dict(values=missing)], tickangle=90, nticks=int(len(df_low_volume_date['date_col_str'])/5))
+    fig.update_xaxes(rangebreaks=[dict(values=missing)], tickangle=90,
+                     nticks=int(len(df_low_volume_date['date_col_str'])/5))
     fig.update_layout(
         title='AAPL Candlestick Chart of Low Volume days',
         xaxis_title='Date',
@@ -138,3 +148,4 @@ if __name__ == "__main__":
         xaxis_rangeslider_visible=False
     )
     fig.show()
+    print("Chart generated and script complete")
