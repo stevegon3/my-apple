@@ -14,14 +14,14 @@ def test_answer_1():
     assert avg_close == 112.95833971146244
 
 def test_answer_2():
-    close_mean = answer_2(test_df)
+    df, close_mean = answer_2(test_df)
     assert close_mean == 43178420.9486166
 
 def test_answer_3():
-    close_mean = answer_2(test_df)
-    print(test_df.head(5))
-    new_df = answer_3(test_df, close_mean)
-    assert len(new_df) == 304
+    df, close_mean = answer_2(test_df)
+    new_df = answer_3(df)
+    assert len(new_df) == 202
+    assert new_df['day_of_week'].values[0] == 'Tuesday'
 
 def test_answer_4():
     new_df = answer_4(test_df)
